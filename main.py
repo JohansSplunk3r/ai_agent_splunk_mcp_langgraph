@@ -15,12 +15,13 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 
 try:
-    from app.agent import graph
+   from app.agent import SecurityIncidentAgent
+   agent = SecurityIncidentAgent()
+   graph = agent.graph
 except ImportError as e:
-    print(f"Error importing agent graph: {e}")
-    print("Please ensure the 'app.agent' module is available and properly configured.")
-    sys.exit(1)
-
+   print(f"Error importing agent: {e}")
+   print("Please ensure the 'app.agent' module is available and properly configured.")
+   sys.exit(1)
 # Load environment variables from .env file
 load_dotenv()
 
