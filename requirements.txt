@@ -1,14 +1,14 @@
 # Core dependencies
-python-dotenv>=1.0.0
-langchain-core>=0.1.0
-langchain>=0.1.0
+python-dotenv
+langchain-core
+langchain
 
 # LangGraph for agent workflows
-langgraph>=0.0.40
+langgraph
 
 # Google API integration (based on GOOGLE_API_KEY requirement)
-langchain-google-genai>=1.0.0
-google-generativeai>=0.3.0
+langchain-google-genai
+google-generativeai
 
 # Optional: Additional LangChain integrations (uncomment if needed)
 # langchain-openai>=0.1.0
