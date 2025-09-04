@@ -1,12 +1,14 @@
 from typing import Literal, Dict, Any, Optional
 import logging
+import asyncio
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage, BaseMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
+from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, create_react_agent
 from app.state import AgentState
 from app.tools.splunk_mcp import SplunkMCP
 from app.tools.cisco_secure_endpoint import CiscoSecureEndpoint
+from app.tools.cisco_firewall import CiscoFirewall
 from app.tools.splunk_soar import SplunkSOAR
 from app.tools.database import Database
 
@@ -24,12 +26,13 @@ class SecurityIncidentAgent:
         # Initialize tools
         self.splunk_mcp = SplunkMCP()
         self.cisco_secure_endpoint = CiscoSecureEndpoint()
+        self.cisco_firewall = CiscoFirewall()
         self.splunk_soar = SplunkSOAR()
         self.database = Database()
         
         # Initialize the LLM for decision making
-        self.model = ChatGoogleGenerativeAI(
-            model="gemini-pro", 
+        self.model = ChatAnthropic(
+            model="claude-sonnet-4-20250514", 
             temperature=0.1,  # Low temperature for consistent responses
             max_tokens=2048
         )
@@ -46,6 +49,7 @@ class SecurityIncidentAgent:
         workflow.add_node("search_splunk", self._splunk_search_node)
         workflow.add_node("assess_threat", self._assess_threat_node)
         workflow.add_node("isolate_endpoint", self._cisco_isolate_node)
+        workflow.add_node("block_firewall", self._cisco_firewall_node)
         workflow.add_node("create_soar_case", self._soar_case_node)
         workflow.add_node("save_context", self._database_node)
         workflow.add_node("human_review", self._human_review_node)
@@ -75,7 +79,8 @@ class SecurityIncidentAgent:
             }
         )
         
-        workflow.add_edge("isolate_endpoint", "create_soar_case")
+        workflow.add_edge("isolate_endpoint", "block_firewall")
+        workflow.add_edge("block_firewall", "create_soar_case")
         workflow.add_edge("create_soar_case", "save_context")
         workflow.add_edge("human_review", "save_context")
         workflow.add_edge("save_context", END)
@@ -125,7 +130,39 @@ class SecurityIncidentAgent:
             logger.error(f"Error in incident analysis: {e}")
             return {
                 "messages": [
-                    ToolMessage(content=f"Analysis failed: {str(e)}", name="analyze_incident")
+                    ToolMessage(content=f"Analysis failed: {str(e)}", tool_call_id="analyze_incident")
+                ],
+                "error": str(e)
+            }
+    
+    def _cisco_firewall_node(self, state: AgentState) -> Dict[str, Any]:
+        """Block malicious IPs using Cisco Firewall."""
+        logger.info("🚫 Blocking malicious IPs via firewall...")
+        
+        try:
+            threat_assessment = state.get("threat_assessment", {})
+            affected_ips = threat_assessment.get("affected_ips", [])
+            
+            blocking_results = []
+            for ip in affected_ips:
+                result = self.cisco_firewall.block_ip(ip)
+                blocking_results.append({"ip": ip, "result": result})
+            
+            return {
+                "messages": [
+                    ToolMessage(
+                        content=f"Firewall blocking completed for {len(affected_ips)} IPs",
+                        tool_call_id="cisco_firewall"
+                    )
+                ],
+                "firewall_results": blocking_results
+            }
+            
+        except Exception as e:
+            logger.error(f"Error in firewall blocking: {e}")
+            return {
+                "messages": [
+                    ToolMessage(content=f"Firewall blocking failed: {str(e)}", tool_call_id="cisco_firewall_error")
                 ],
                 "error": str(e)
             }
@@ -140,11 +177,11 @@ class SecurityIncidentAgent:
             analysis = state.get("analysis", {})
             
             # Perform Splunk search
-            search_result = self.splunk_mcp.search(incident_data)
+            search_result = asyncio.run(self.splunk_mcp.search(incident_data))
             
             return {
                 "messages": [
-                    ToolMessage(content=str(search_result), name="splunk_search")
+                    ToolMessage(content=str(search_result), tool_call_id="splunk_search")
                 ],
                 "splunk_results": search_result
             }
@@ -153,7 +190,7 @@ class SecurityIncidentAgent:
             logger.error(f"Error in Splunk search: {e}")
             return {
                 "messages": [
-                    ToolMessage(content=f"Splunk search failed: {str(e)}", name="splunk_search_error")
+                    ToolMessage(content=f"Splunk search failed: {str(e)}", tool_call_id="splunk_search_error")
                 ],
                 "error": str(e)
             }
@@ -202,7 +239,7 @@ class SecurityIncidentAgent:
             logger.error(f"Error in threat assessment: {e}")
             return {
                 "messages": [
-                    ToolMessage(content=f"Threat assessment failed: {str(e)}", name="assess_threat_error")
+                    ToolMessage(content=f"Threat assessment failed: {str(e)}", tool_call_id="assess_threat_error")
                 ],
                 "error": str(e)
             }
@@ -224,7 +261,7 @@ class SecurityIncidentAgent:
                 "messages": [
                     ToolMessage(
                         content=f"Endpoint isolation completed for {len(affected_ips)} devices",
-                        name="cisco_isolate"
+                        tool_call_id="cisco_isolate"
                     )
                 ],
                 "isolation_results": isolation_results
@@ -234,7 +271,7 @@ class SecurityIncidentAgent:
             logger.error(f"Error in endpoint isolation: {e}")
             return {
                 "messages": [
-                    ToolMessage(content=f"Endpoint isolation failed: {str(e)}", name="cisco_isolate_error")
+                    ToolMessage(content=f"Endpoint isolation failed: {str(e)}", tool_call_id="cisco_isolate_error")
                 ],
                 "error": str(e)
             }
@@ -249,14 +286,15 @@ class SecurityIncidentAgent:
                 "analysis": state.get("analysis", {}),
                 "splunk_results": state.get("splunk_results", ""),
                 "threat_assessment": state.get("threat_assessment", {}),
-                "isolation_results": state.get("isolation_results", [])
+                "isolation_results": state.get("isolation_results", []),
+                "firewall_results": state.get("firewall_results", [])
             }
             
             case_result = self.splunk_soar.create_case(case_data)
             
             return {
                 "messages": [
-                    ToolMessage(content=f"SOAR case created: {case_result}", name="soar_case")
+                    ToolMessage(content=f"SOAR case created: {case_result}", tool_call_id="soar_case")
                 ],
                 "soar_case_id": case_result.get("case_id") if isinstance(case_result, dict) else None
             }
@@ -265,7 +303,7 @@ class SecurityIncidentAgent:
             logger.error(f"Error creating SOAR case: {e}")
             return {
                 "messages": [
-                    ToolMessage(content=f"SOAR case creation failed: {str(e)}", name="soar_case_error")
+                    ToolMessage(content=f"SOAR case creation failed: {str(e)}", tool_call_id="soar_case_error")
                 ],
                 "error": str(e)
             }
@@ -282,6 +320,7 @@ class SecurityIncidentAgent:
                 "splunk_results": state.get("splunk_results", ""),
                 "threat_assessment": state.get("threat_assessment", {}),
                 "isolation_results": state.get("isolation_results", []),
+                "firewall_results": state.get("firewall_results", []),
                 "soar_case_id": state.get("soar_case_id"),
                 "workflow_status": "completed"
             }
@@ -290,7 +329,7 @@ class SecurityIncidentAgent:
             
             return {
                 "messages": [
-                    ToolMessage(content=f"Workflow context saved: {save_result}", name="save_context")
+                    ToolMessage(content=f"Workflow context saved: {save_result}", tool_call_id="save_context")
                 ],
                 "workflow_complete": True
             }
@@ -299,7 +338,7 @@ class SecurityIncidentAgent:
             logger.error(f"Error saving context: {e}")
             return {
                 "messages": [
-                    ToolMessage(content=f"Context save failed: {str(e)}", name="save_context_error")
+                    ToolMessage(content=f"Context save failed: {str(e)}", tool_call_id="save_context_error")
                 ],
                 "error": str(e)
             }
@@ -310,7 +349,7 @@ class SecurityIncidentAgent:
         
         return {
             "messages": [
-                ToolMessage(content="Incident flagged for human analyst review", name="human_review")
+                ToolMessage(content="Incident flagged for human analyst review", tool_call_id="human_review")
             ],
             "requires_human_review": True
         }
