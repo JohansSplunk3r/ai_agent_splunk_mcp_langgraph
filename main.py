@@ -14,6 +14,9 @@ from typing import Dict, Any
 from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage
 
+# Load environment variables from .env file
+load_dotenv()
+
 try:
    from app.agent import SecurityIncidentAgent
    agent = SecurityIncidentAgent()
@@ -22,8 +25,6 @@ except ImportError as e:
    print(f"Error importing agent: {e}")
    print("Please ensure the 'app.agent' module is available and properly configured.")
    sys.exit(1)
-# Load environment variables from .env file
-load_dotenv()
 
 # Configure logging
 logging.basicConfig(
@@ -73,6 +74,7 @@ def validate_json_input(json_string: str) -> bool:
         return False
 
 
+## This is where we could add in a handler that would process the ES event
 def process_splunk_event(splunk_event_json: str) -> None:
     """
     Process a Splunk event through the LangGraph agent.

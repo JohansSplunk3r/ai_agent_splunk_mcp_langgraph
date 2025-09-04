@@ -10,6 +10,13 @@ langgraph
 langchain-google-genai
 google-generativeai
 
+# FastAPI and async HTTP dependencies
+fastapi
+uvicorn
+httpx
+pydantic
+sse-starlette
+
 # Optional: Additional LangChain integrations (uncomment if needed)
 # langchain-openai>=0.1.0
 # langchain-anthropic>=0.1.0
