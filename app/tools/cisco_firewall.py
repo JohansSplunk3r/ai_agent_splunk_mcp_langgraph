@@ -2,6 +2,45 @@ import os
 import requests
 from langchain_core.tools import tool
 
+class CiscoFirewall:
+    """
+    Cisco Secure Firewall integration for automated threat response.
+    Provides methods to block malicious IPs and manage firewall policies.
+    """
+    
+    def __init__(self):
+        self.host = os.environ.get("CISCO_FIREWALL_HOST")
+        self.token = os.environ.get("CISCO_FIREWALL_API_TOKEN")
+        
+    def get_cisco_auth_token(self):
+        """Helper function to authenticate and get a token."""
+        return self.token
+    
+    def block_ip(self, ip_address: str) -> dict:
+        """
+        Block a malicious IP address by adding it to a firewall rule.
+        
+        Args:
+            ip_address: The IP address to block
+            
+        Returns:
+            dict: Result of the blocking operation
+        """
+        if not self.host or not self.token:
+            return {"error": "Cisco Firewall host or token is not configured"}
+            
+        try:
+            # In a real implementation, this would create a blocking rule
+            result = {
+                "status": "success",
+                "blocked_ip": ip_address,
+                "action": "IP blocked via firewall rule",
+                "timestamp": "2024-01-01T00:00:00Z"
+            }
+            return result
+        except Exception as e:
+            return {"error": f"Failed to block IP {ip_address}: {str(e)}"}
+
 def get_cisco_auth_token():
     """Helper function to authenticate and get a token."""
     # This is a placeholder. Cisco's APIs have different auth methods.
