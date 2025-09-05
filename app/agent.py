@@ -176,8 +176,9 @@ class SecurityIncidentAgent:
             incident_data = state["messages"][-1].content
             analysis = state.get("analysis", {})
             
-            # Perform Splunk search
-            search_result = asyncio.run(self.splunk_mcp.search(incident_data))
+            # Perform Splunk search - use run_splunk_query method
+            search_query = f"search {incident_data} | head 100"  # Basic search query
+            search_result = asyncio.run(self.splunk_mcp.run_splunk_query(search_query, row_limit=100))
             
             return {
                 "messages": [
