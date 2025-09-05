@@ -11,9 +11,10 @@ langchain-anthropic>=0.3.0
 anthropic>=0.64.0
 
 # FastAPI and async HTTP dependencies
-fastapi
 uvicorn
 httpx
+json 
+asyncio
 pydantic
 sse-starlette
 
