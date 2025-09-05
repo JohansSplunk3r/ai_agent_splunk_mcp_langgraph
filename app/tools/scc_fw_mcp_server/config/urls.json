@@ -1,0 +1,32 @@
+[
+    {
+        "URL": "/firewall/v1/inventory/devices",
+        "Name": "List Devices",
+        "Method": "GET"
+    },
+    {
+        "URL": "/firewall/v1/policies/asa/accessrules",
+        "Name": "List ASA Access Rule",
+        "Method": "GET"
+    },
+    {
+        "URL": "/firewall/v1/inventory/devices/d8e6a78d-8331-4f33-86da-3a2a85cf69c8",
+        "Name": "Get Device", 
+        "Method": "GET"
+    },
+    {
+        "URL": "/firewall/v1/inventory/devices/asas/d8e6a78d-8331-4f33-86da-3a2a85cf69c8/configs",
+        "Name": "ASA Config Details",
+        "Method": "GET"
+    },
+    {
+        "URL": "/firewall/v1/inventory/devices/asas/d8e6a78d-8331-4f33-86da-3a2a85cf69c8/deploy",
+        "Name": "Deploy ASA Config Changes",
+        "Method": "POST"
+    },
+    {
+        "URL": "/firewall/v1/inventory/devices/asas/d8e6a78d-8331-4f33-86da-3a2a85cf69c8/configs ",
+        "Name": "ASA Configs",
+        "Method":"GET"
+    }
+]

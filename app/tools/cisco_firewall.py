@@ -1,8 +1,11 @@
 import os
 import requests
 from langchain_core.tools import tool
+from mcp import ClientSession, StdioServerParameters
+from mcp.client.stdio import stdio_client
 
-### Make MCP Server skeleton 
+from langchain_mcp_adapters.tools import load_mcp_tools
+from langgraph.prebuilt import create_react_agent
 
 ### When agent runs 
 
@@ -13,12 +16,17 @@ class CiscoFirewall:
     """
     
     def __init__(self):
+        # need to initialize with host from event based on ip 
         self.host = os.environ.get("CISCO_FIREWALL_HOST")
         self.token = os.environ.get("CISCO_FIREWALL_API_TOKEN")
-        
-    def get_cisco_auth_token(self):
-        """Helper function to authenticate and get a token."""
-        return self.token
+        self.server_params = StdioServerParameters(
+            command="python", 
+            args=[ "scc_fw_mcp_server.py", "--oneshot" ], 
+            env={ 
+                "FIREWALL_BASE_URL": "https://api.us.security.cisco.com/", 
+                "API_KEY": "eyJraWQiOiIwIiwidHlwIjoiSldUIiwiYWxnIjoiUlMyNTYifQ.eyJ2ZXIiOiIwIiwicm9sZXMiOlsiUk9MRV9TVVBFUl9BRE1JTiJdLCJpc3MiOiJpdGQiLCJjbHVzdGVySWQiOiI1Iiwic3ViamVjdFR5cGUiOiJ1c2VyIiwiY2xpZW50X2lkIjoiYXBpLWNsaWVudCIsInBhcmVudElkIjoiN2Y5Yzc2ZTUtODg4MC00ZTkwLWFjNTAtNGYyNzkzMTA4ZDQ4Iiwic2NvcGUiOlsidHJ1c3QiLCJyZWFkIiwiN2Y5Yzc2ZTUtODg4MC00ZTkwLWFjNTAtNGYyNzkzMTA4ZDQ4Iiwid3JpdGUiXSwiaWQiOiI3ZTRiNGQ3ZC1mZmM3LTQ3ZjAtOTc3Ny1iNjQxOTZlZDAzNTYiLCJleHAiOjM5MDMwNTE1NjgsInJlZ2lvbiI6InByb2QiLCJpYXQiOjE3NTU1Njc5ODEsImp0aSI6ImM3YmZkNTM4LTA1MzItNDU1ZS05NDZiLTNkMzExNDYwMGViYSJ9.XvrsrX0Jlp1gpWDew3xoz0BWaEeDHYSf8qeYsNcIXaNQGhUdhXR_fBeZqKZ9lgBHCg6Cf2mWDYVLnHWdH8ylDIr4nDdzVpA7x_4E0-pzxmUP-ldC6ASlqV69C6bJWuMhlV9AsdeWAY_iCvjSn-1trkdkjiiChyUNoH7ZoYaXby1o6YPncoAr2oU8rBZmst06L5EfblX2iAemQVvC4aFmr2mHiD6hTpIk69nHpMFqxqMZ3tvREAQYv4Bmy2G2n-eXBA8ETyUd6Dj4duo1QTz8Q7qBizNgfWSS2jmzxzzEbeT2vlDK7_F0-pMxGxIK6oyNRw3vA9q8HXQKbCxXURlrKg", 
+            }
+        )
     
     def block_ip(self, ip_address: str) -> dict:
         """
@@ -44,13 +52,7 @@ class CiscoFirewall:
             return result
         except Exception as e:
             return {"error": f"Failed to block IP {ip_address}: {str(e)}"}
-
-def get_cisco_auth_token():
-    """Helper function to authenticate and get a token."""
-    # This is a placeholder. Cisco's APIs have different auth methods.
-    # This example assumes a simple bearer token model.
-    # You might need to implement a more complex OAuth2 flow.
-    return os.environ.get("CISCO_FIREWALL_API_TOKEN")
+        
 
 @tool
 def get_firewall_policies():
@@ -58,7 +60,7 @@ def get_firewall_policies():
     Retrieves the list of access control policies from the Cisco Secure Firewall.
     """
     host = os.environ.get("CISCO_FIREWALL_HOST")
-    token = get_cisco_auth_token()
+    token = os.environ.get("CISCO_FIREWALL_API_TOKEN")
 
     if not host or not token:
         return "Error: Cisco Firewall host or token is not configured in the environment."
@@ -95,11 +97,14 @@ def add_firewall_rule(policy_id: str, rule_name: str, source_ip: str, dest_ip: s
     # Cisco Secure Firewall API documentation.
     return f"Placeholder: A rule named '{rule_name}' would be added to policy '{policy_id}' to {action} traffic from {source_ip} to {dest_ip}."
 
+async def main():
+    client = CiscoFirewall()
+    config = {"configurable": {"thread_id": 1234}}
+    async with stdio_client(client.server_params) as (read, write):
+        async with ClientSession(read, write) as session:
+            await session.initialize()
 
-# Example of how to use the tool directly
-if __name__ == '__main__':
-    from dotenv import load_dotenv
-    load_dotenv()
-    # Make sure to have a .env file with CISCO_* variables set
-    # print(get_firewall_policies.invoke({}))
-    print("Please run this tool from within the agent or by uncommenting examples.")
+            # Check available tools
+            tools = await load_mcp_tools(session)
+            print("Available tools:", [tool.name for tool in tools])
+            
