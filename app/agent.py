@@ -6,7 +6,7 @@ from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, create_react_agent
 from app.state import AgentState
-from app.tools.splunk_mcp import SplunkMCP
+from app.tools.splunk_mcp import SplunkMCPClient
 from app.tools.cisco_secure_endpoint import CiscoSecureEndpoint
 from app.tools.cisco_firewall import CiscoFirewall
 from app.tools.splunk_soar import SplunkSOAR
@@ -24,7 +24,7 @@ class SecurityIncidentAgent:
     
     def __init__(self):
         # Initialize tools
-        self.splunk_mcp = SplunkMCP()
+        self.splunk_mcp = SplunkMCPClient()
         self.cisco_secure_endpoint = CiscoSecureEndpoint()
         self.cisco_firewall = CiscoFirewall()
         self.splunk_soar = SplunkSOAR()
