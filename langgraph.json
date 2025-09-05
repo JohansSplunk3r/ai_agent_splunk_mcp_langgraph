@@ -1,0 +1,16 @@
+{
+  "dependencies": [
+    "."
+  ],
+  "graphs": {
+    "security_agent": {
+      "title": "Interactive Security Incident Response Agent",
+      "description": "AI-powered security incident analysis and response workflow with conditional routing based on threat levels",
+      "entrypoint": "langgraph_studio_demo.py:get_graph",
+      "api_dependencies": [
+        "langchain_anthropic"
+      ]
+    }
+  },
+  "env": ".env"
+}

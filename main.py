@@ -41,7 +41,7 @@ def validate_environment() -> bool:
     Returns:
         bool: True if all required environment variables are set, False otherwise.
     """
-    required_vars = ["GOOGLE_API_KEY"]
+    required_vars = ["ANTHROPIC_API_KEY", "SPLUNK_MCP_BASE_URL", "SPLUNK_MCP_BEARER_TOKEN"]
     missing_vars = []
     
     for var in required_vars:
