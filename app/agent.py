@@ -2,6 +2,7 @@ from typing import Literal, Dict, Any, Optional
 import logging
 import asyncio
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage, BaseMessage
+from langchain_core.tools import tool
 from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, create_react_agent
