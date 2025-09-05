@@ -257,8 +257,14 @@ class SecurityIncidentAgent:
             isolation_results = []
             for ip in affected_ips:
                 result = self.cisco_secure_endpoint.isolate_endpoint(ip)
+                #isolation_results.append({"ip": ip, "result": result})
+
+                ## add in a wait timeout to have isolation in progress and then complete isolation.
+                asyncio.sleep(5)  # Wait for 5 seconds (simulate waiting for isolation to complete)
+                result = self.cisco_secure_endpoint.get_isolation_status(ip)
+                isolation_results[-1]["status"] = result
                 isolation_results.append({"ip": ip, "result": result})
-            
+
             return {
                 "messages": [
                     ToolMessage(
