@@ -2,6 +2,10 @@ import os
 import requests
 from langchain_core.tools import tool
 
+### Make MCP Server skeleton 
+
+### When agent runs 
+
 class CiscoFirewall:
     """
     Cisco Secure Firewall integration for automated threat response.
