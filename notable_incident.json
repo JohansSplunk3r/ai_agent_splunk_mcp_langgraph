@@ -1,0 +1,237 @@
+{
+  "notable_event": {
+    "event_id": "notable_event_12345678-90ab-cdef-1234-567890abcdef",
+    "title": "Suspicious PowerShell Execution with Network Communication",
+    "description": "Detected potentially malicious PowerShell activity with base64 encoded commands, followed by suspicious network connections to known bad domains. Multiple MITRE ATT&CK techniques observed.",
+    "severity": "high",
+    "urgency": "high",
+    "status": "new",
+    "owner": "unassigned",
+    "source": "splunk_es_correlation_search",
+    "rule_name": "Malicious PowerShell Activity with C2 Communication",
+    "rule_id": "CS_001_PowerShell_Malicious_Activity",
+    "timestamp": "2025-09-04T14:23:45.123Z",
+    "first_time": "2025-09-04T14:20:15.000Z",
+    "last_time": "2025-09-04T14:23:45.000Z",
+    "count": 7,
+    "disposition": "unknown",
+    "investigation_status": "pending",
+    
+    "affected_assets": [
+      {
+        "hostname": "WORKSTATION-7821",
+        "ip_address": "10.50.25.142",
+        "mac_address": "00:1B:44:11:3A:B7",
+        "os": "Windows 10 Enterprise",
+        "asset_type": "endpoint",
+        "criticality": "medium",
+        "location": "Corporate Network - Floor 3",
+        "department": "Finance"
+      }
+    ],
+    
+    "indicators_of_compromise": [
+      {
+        "type": "file_hash",
+        "value": "a1b2c3d4e5f6789012345678901234567890abcd",
+        "hash_type": "sha1",
+        "description": "Suspicious PowerShell script hash"
+      },
+      {
+        "type": "file_hash", 
+        "value": "d41d8cd98f00b204e9800998ecf8427e12345678901234567890123456789012",
+        "hash_type": "sha256",
+        "description": "Dropped payload file hash"
+      },
+      {
+        "type": "domain",
+        "value": "malicious-c2.badactor.com",
+        "description": "Command and control domain"
+      },
+      {
+        "type": "ip_address",
+        "value": "185.243.112.45",
+        "description": "External C2 server IP"
+      },
+      {
+        "type": "url",
+        "value": "http://malicious-c2.badactor.com/payload.exe",
+        "description": "Malware download URL"
+      },
+      {
+        "type": "file_path",
+        "value": "C:\\Users\\jdoe\\AppData\\Local\\Temp\\update.exe",
+        "description": "Suspicious executable location"
+      },
+      {
+        "type": "registry_key",
+        "value": "HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run\\WindowsUpdate",
+        "description": "Persistence registry key"
+      }
+    ],
+    
+    "mitre_attack": {
+      "tactics": [
+        {
+          "tactic_id": "TA0002",
+          "tactic_name": "Execution",
+          "techniques": [
+            {
+              "technique_id": "T1059.001",
+              "technique_name": "PowerShell",
+              "sub_technique": "Command and Scripting Interpreter: PowerShell",
+              "description": "Adversary executed base64 encoded PowerShell commands"
+            }
+          ]
+        },
+        {
+          "tactic_id": "TA0003", 
+          "tactic_name": "Persistence",
+          "techniques": [
+            {
+              "technique_id": "T1547.001",
+              "technique_name": "Registry Run Keys / Startup Folder",
+              "sub_technique": "Boot or Logon Autostart Execution: Registry Run Keys / Startup Folder",
+              "description": "Malware created registry run key for persistence"
+            }
+          ]
+        },
+        {
+          "tactic_id": "TA0005",
+          "tactic_name": "Defense Evasion", 
+          "techniques": [
+            {
+              "technique_id": "T1027",
+              "technique_name": "Obfuscated Files or Information",
+              "description": "PowerShell commands were base64 encoded to evade detection"
+            },
+            {
+              "technique_id": "T1055",
+              "technique_name": "Process Injection",
+              "description": "Suspicious process injection observed"
+            }
+          ]
+        },
+        {
+          "tactic_id": "TA0011",
+          "tactic_name": "Command and Control",
+          "techniques": [
+            {
+              "technique_id": "T1071.001",
+              "technique_name": "Web Protocols", 
+              "sub_technique": "Application Layer Protocol: Web Protocols",
+              "description": "HTTP/HTTPS communication to external C2 server"
+            }
+          ]
+        }
+      ]
+    },
+    
+    "timeline": [
+      {
+        "timestamp": "2025-09-04T14:20:15.000Z",
+        "event_type": "process_creation",
+        "description": "PowerShell.exe spawned with suspicious base64 encoded command line",
+        "source": "sysmon"
+      },
+      {
+        "timestamp": "2025-09-04T14:20:22.000Z", 
+        "event_type": "network_connection",
+        "description": "Outbound connection to 185.243.112.45:443",
+        "source": "firewall_logs"
+      },
+      {
+        "timestamp": "2025-09-04T14:20:45.000Z",
+        "event_type": "file_creation", 
+        "description": "Suspicious executable dropped to temp directory",
+        "source": "sysmon"
+      },
+      {
+        "timestamp": "2025-09-04T14:21:10.000Z",
+        "event_type": "registry_modification",
+        "description": "Registry run key created for persistence",
+        "source": "sysmon"
+      },
+      {
+        "timestamp": "2025-09-04T14:23:45.000Z",
+        "event_type": "dns_query",
+        "description": "DNS resolution for malicious-c2.badactor.com",
+        "source": "dns_logs"
+      }
+    ],
+    
+    "raw_events": [
+      {
+        "event_id": "evt_001",
+        "source": "WinEventLog:Microsoft-Windows-Sysmon/Operational",
+        "timestamp": "2025-09-04T14:20:15.000Z",
+        "event_code": 1,
+        "process_name": "PowerShell.exe",
+        "command_line": "powershell.exe -EncodedCommand JABzAD0ATgBlAHcALQBPAGIAagBlAGMAdAAgAEkATwAuAE0AZQBtAG8AcgB5AFMAdAByAGUAYQBtACgALABbAEMAbwBuAHYAZQByAHQAXQA6ADoARgByAG8AbQBCAGEAcwBlADYANABTAHQAcgBpAG4AZwAoACQAZABhAHQAYQApACkA",
+        "parent_process": "explorer.exe",
+        "user": "CORP\\jdoe"
+      },
+      {
+        "event_id": "evt_002", 
+        "source": "WinEventLog:Microsoft-Windows-Sysmon/Operational",
+        "timestamp": "2025-09-04T14:20:22.000Z",
+        "event_code": 3,
+        "process_name": "PowerShell.exe",
+        "destination_ip": "185.243.112.45",
+        "destination_port": 443,
+        "protocol": "tcp"
+      }
+    ],
+    
+    "risk_score": 85,
+    "confidence": "high",
+    "false_positive_probability": 0.15,
+    
+    "analyst_notes": [],
+    "tags": [
+      "malware",
+      "powershell", 
+      "c2_communication",
+      "persistence",
+      "base64_encoded",
+      "suspicious_network_activity"
+    ],
+    
+    "remediation_actions": [
+      {
+        "action": "isolate_endpoint",
+        "description": "Isolate WORKSTATION-7821 from network",
+        "priority": "immediate",
+        "status": "pending"
+      },
+      {
+        "action": "block_domains",
+        "description": "Block malicious-c2.badactor.com at DNS/proxy level",
+        "priority": "high", 
+        "status": "pending"
+      },
+      {
+        "action": "collect_forensics",
+        "description": "Collect memory dump and disk image from affected system",
+        "priority": "medium",
+        "status": "pending"
+      }
+    ],
+    
+    "related_events": [
+      "notable_event_12345679-90ab-cdef-1234-567890abcdef",
+      "notable_event_12345680-90ab-cdef-1234-567890abcdef"
+    ],
+    
+    "threat_intelligence": {
+      "threat_actor": "Unknown",
+      "campaign": "Possible Emotet variant",
+      "malware_family": "Generic Trojan",
+      "threat_sources": [
+        "VirusTotal",
+        "MISP",
+        "Internal Threat Intel"
+      ]
+    }
+  }
+}
