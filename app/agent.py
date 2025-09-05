@@ -2,11 +2,12 @@ from typing import Literal, Dict, Any, Optional
 import logging
 import asyncio
 from langchain_core.messages import ToolMessage, HumanMessage, AIMessage, BaseMessage
+from langchain_core.tools import tool
 from langchain_anthropic import ChatAnthropic
 from langgraph.graph import StateGraph, START, END
 from langgraph.prebuilt import ToolNode, create_react_agent
 from app.state import AgentState
-from app.tools.splunk_mcp import SplunkMCP
+from app.tools.splunk_mcp import SplunkMCPClient
 from app.tools.cisco_secure_endpoint import CiscoSecureEndpoint
 from app.tools.cisco_firewall import CiscoFirewall
 from app.tools.splunk_soar import SplunkSOAR
@@ -24,7 +25,7 @@ class SecurityIncidentAgent:
     
     def __init__(self):
         # Initialize tools
-        self.splunk_mcp = SplunkMCP()
+        self.splunk_mcp = SplunkMCPClient()
         self.cisco_secure_endpoint = CiscoSecureEndpoint()
         self.cisco_firewall = CiscoFirewall()
         self.splunk_soar = SplunkSOAR()
@@ -176,8 +177,9 @@ class SecurityIncidentAgent:
             incident_data = state["messages"][-1].content
             analysis = state.get("analysis", {})
             
-            # Perform Splunk search
-            search_result = asyncio.run(self.splunk_mcp.search(incident_data))
+            # Perform Splunk search - use run_splunk_query method
+            search_query = f"search {incident_data} | head 100"  # Basic search query
+            search_result = asyncio.run(self.splunk_mcp.run_splunk_query(search_query, row_limit=100))
             
             return {
                 "messages": [
@@ -255,8 +257,14 @@ class SecurityIncidentAgent:
             isolation_results = []
             for ip in affected_ips:
                 result = self.cisco_secure_endpoint.isolate_endpoint(ip)
+                #isolation_results.append({"ip": ip, "result": result})
+
+                ## add in a wait timeout to have isolation in progress and then complete isolation.
+                asyncio.sleep(5)  # Wait for 5 seconds (simulate waiting for isolation to complete)
+                result = self.cisco_secure_endpoint.get_isolation_status(ip)
+                isolation_results[-1]["status"] = result
                 isolation_results.append({"ip": ip, "result": result})
-            
+
             return {
                 "messages": [
                     ToolMessage(
